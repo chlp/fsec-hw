@@ -2,6 +2,7 @@
 
 namespace App\Queue;
 
+use App\Utility\Supervisor;
 use Aws\Kinesis\KinesisClient;
 use App\Utility\Logger;
 use Exception;
@@ -111,26 +112,38 @@ class DataStreamService
             'StreamName' => $this->streamName,
             'Records' => []
         ];
+
+        $sizeOfRecordsToSend = 0;
+        $countOfRecordsToSend = 0;
+
         foreach ($this->recordsBuffer as $record) {
             $parameter['Records'][] = [
                 'Data' => $record[0],
                 'PartitionKey' => md5($record[0])
             ];
+            $countOfRecordsToSend++;
+            $sizeOfRecordsToSend += strlen(base64_encode($record[0]));
         }
+
+        Supervisor::moreDataStreamMessagesSent($countOfRecordsToSend, $sizeOfRecordsToSend);
+
         try {
             $res = $this->kinesisClient->putRecords($parameter);
         } catch (Exception $e) {
             Logger::error('DataStreamService::sendRecords() exception: ' . Logger::getExceptionMessage($e));
             return;
         }
+
         if ($res->get('FailedRecordCount') !== 0) {
             // todo: What can i do here? Can i detect the wrong record and if I so, what?
             Logger::error('DataStreamService::sendRecords() FailedRecordCount: ' . $res->get('FailedRecordCount'));
         }
+
         $this->lastFlushTimestamp = time();
         foreach ($this->recordsBuffer as $record) {
             $record[1]();
         }
+
         $this->recordsBuffer = [];
     }
 }
