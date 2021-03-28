@@ -1,63 +1,10 @@
 <?php
 
-require 'vendor/autoload.php';
-
-class Logger
-{
-    private const ERROR = 'Error';
-    private const WARNING = 'Warning';
-    private const INFO = 'Info';
-
-    /**
-     * @throws Exception
-     */
-    private function __construct()
-    {
-        throw new Exception('Logger is Utility Class. Only static methods.');
-    }
-
-    /**
-     * here we can use any special logger system for project
-     * @param array $log
-     */
-    private static function writeLog(array $log): void
-    {
-        error_log(json_encode($log, JSON_UNESCAPED_UNICODE));
-    }
-
-    public static function error(string $message): void
-    {
-        self::writeLog([
-            'level' => self::ERROR,
-            'message' => $message,
-        ]);
-    }
-
-    public static function warning(string $message): void
-    {
-        self::writeLog([
-            'level' => self::WARNING,
-            'message' => $message,
-        ]);
-    }
-
-    public static function info(string $message): void
-    {
-        self::writeLog([
-            'level' => self::INFO,
-            'message' => $message,
-        ]);
-    }
-
-    public static function getExceptionMessage(Exception $exception): string
-    {
-        return get_class($exception) .
-            ' (' . $exception->getFile() . ':' . $exception->getLine() . ' ): ' .
-            $exception->getMessage();
-    }
-}
+require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/app/loader.php';
 
 use Aws\Sqs\SqsClient;
+use App\Utility\Logger;
 
 $queueName = "submissions";
 
@@ -466,7 +413,6 @@ class TelemetryMessage
 }
 
 try {
-    echo "Wait...\n";
     $result = $sqsClient->receiveMessage(array(
         'AttributeNames' => ['SentTimestamp'],
         'MaxNumberOfMessages' => 1,
@@ -479,13 +425,11 @@ try {
         return null;
     }
     foreach ($result['Messages'] as $message) {
-        TelemetryMessage::createFromQueueMessage($message);
+        $tmM = TelemetryMessage::createFromQueueMessage($message);
+        echo $tmM->getMessageIdMark();
         exit;
     }
     exit;
-//    method_exists($result, 'me')
-//    is_array($result)
-//    $result
 } catch (Exception $e) {
     Logger::error(Logger::getExceptionMessage($e));
 }
