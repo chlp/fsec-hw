@@ -31,13 +31,24 @@ $dataStreamService = new \App\Queue\DataStreamService(
     $conf->getDataStreamFlushIntervalSec()
 );
 
-$messages = $queueService->receiveMessages();
-if ($messages === null) {
-    var_dump('fail');
-    exit;
-}
-foreach ($messages as $message) {
-    $tmM = TelemetryMessage::createFromQueueMessage($message);
-    echo $tmM->getMessageIdMark();
-    exit;
+while (true) {
+    $dataStreamService->flushIfNeed();
+
+    $messages = $queueService->receiveMessages(); // long polling wait
+    if ($messages === null) {
+        var_dump('fail');
+        sleep(1);
+        continue;
+    }
+
+    $receiptHandles = $queueService->getReceiptHandles($messages);
+
+    foreach ($messages as $message) {
+        $telemetryMessage = TelemetryMessage::createFromQueueMessage($message);
+        if ($telemetryMessage !== null) {
+            echo $telemetryMessage->getMessageIdMark() . "\n";
+            $dataStreamService->putMessage(['id' => $telemetryMessage->getMessageIdMark()]);
+        }
+    }
+    // todo: need to delete
 }

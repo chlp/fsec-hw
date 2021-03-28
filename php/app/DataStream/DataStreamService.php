@@ -35,10 +35,14 @@ class DataStreamService
     private $lastFlushTimestamp;
 
     /**
-     * array of array with 2 elements: record and callable
      * @var array
      */
     private $recordsBuffer;
+
+    /**
+     * @var callable[]
+     */
+    private $toCallAfterSending;
 
     /**
      * DataStreamService constructor.
@@ -75,25 +79,29 @@ class DataStreamService
         $this->maxBufferSize = $maxBufferSize;
         $this->maxBufferFlushIntervalSec = $maxBufferFlushIntervalSec;
         $this->recordsBuffer = [];
+        $this->toCallAfterSending = [];
         $this->lastFlushTimestamp = 0;
     }
 
     /**
      * Putting message to the buffer before it would be sent to data stream
-     * Call $callbackAfterSent after putting message in the stream
      * @param array $data
-     * @param callable $callbackAfterSent
      */
-    public function putMessage(array $data, callable $callbackAfterSent): void
+    public function putMessage(array $data): void
     {
-        $this->recordsBuffer[] = [json_encode($data, JSON_UNESCAPED_UNICODE), $callbackAfterSent];
+        $this->recordsBuffer[] = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->flushIfNeed();
+    }
+
+    public function putCallbackOnSuccessSending(callable $func): void
+    {
+        $this->toCallAfterSending[] = $func;
     }
 
     /**
      * flush the buffer if records count more than max or time has come
      */
-    private function flushIfNeed(): void
+    public function flushIfNeed(): void
     {
         if (
             count($this->recordsBuffer) >= $this->maxBufferSize ||
@@ -108,42 +116,57 @@ class DataStreamService
      */
     private function flush(): void
     {
+        if (count($this->recordsBuffer) === 0) {
+            $this->lastFlushTimestamp = time();
+            return;
+        }
+
+        if ($this->send()) {
+            foreach ($this->toCallAfterSending as $callable) {
+                try {
+                    $callable();
+                } catch (Exception $e) {
+                    Logger::warning('DataStreamService::flush() callable exception: ' . Logger::getExceptionMessage($e));
+                }
+            }
+            $this->lastFlushTimestamp = time();
+            $this->recordsBuffer = [];
+            $this->toCallAfterSending = [];
+        }
+    }
+
+    private function send(): bool
+    {
         $parameter = [
             'StreamName' => $this->streamName,
             'Records' => []
         ];
 
         $sizeOfRecordsToSend = 0;
-        $countOfRecordsToSend = 0;
-
         foreach ($this->recordsBuffer as $record) {
             $parameter['Records'][] = [
-                'Data' => $record[0],
-                'PartitionKey' => md5($record[0])
+                'Data' => $record,
+                'PartitionKey' => md5($record)
             ];
-            $countOfRecordsToSend++;
-            $sizeOfRecordsToSend += strlen(base64_encode($record[0]));
+            $sizeOfRecordsToSend += strlen(base64_encode($record));
         }
-
-        Supervisor::moreDataStreamMessagesSent($countOfRecordsToSend, $sizeOfRecordsToSend);
+        Supervisor::moreDataStreamMessagesSent(count($this->recordsBuffer), $sizeOfRecordsToSend);
 
         try {
             $res = $this->kinesisClient->putRecords($parameter);
         } catch (Exception $e) {
             Logger::error('DataStreamService::sendRecords() exception: ' . Logger::getExceptionMessage($e));
-            return;
+            return false;
         }
 
         if ($res->get('FailedRecordCount') !== 0) {
+            var_dump(count($this->recordsBuffer));
+            var_dump($res->__toString());
             // todo: What can i do here? Can i detect the wrong record and if I so, what?
             Logger::error('DataStreamService::sendRecords() FailedRecordCount: ' . $res->get('FailedRecordCount'));
+            return false;
         }
 
-        $this->lastFlushTimestamp = time();
-        foreach ($this->recordsBuffer as $record) {
-            $record[1]();
-        }
-
-        $this->recordsBuffer = [];
+        return true;
     }
 }

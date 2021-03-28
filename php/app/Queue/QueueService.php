@@ -79,6 +79,10 @@ class QueueService
         $this->queueUrl = self::getQueueUrl($this->sqsClient, $this->queueName);
     }
 
+    /**
+     * Long polling wait
+     * @return array|null
+     */
     public function receiveMessages(): ?array
     {
         try {
@@ -100,6 +104,41 @@ class QueueService
         return $result['Messages'];
     }
 
+    /**
+     * Get the receipt handles for the next deletion
+     * @param array $messages - result of ::receiveMessages()
+     * @return array
+     */
+    public function getReceiptHandles(array $messages): array
+    {
+        $receiptHandles = [];
+        foreach ($messages as $message) {
+            $receiptHandles[] = $message['ReceiptHandle'];
+        }
+        return $receiptHandles;
+    }
+
+    /**
+     * @param array $receiptHandles - result of getReceiptHandles
+     */
+    public function deleteMessages(array $receiptHandles): void
+    {
+        $entries = [];
+        foreach ($receiptHandles as $i => $receiptHandle) {
+            $entries[] = [
+                'Id' => 'item_id_' . $i,
+                'ReceiptHandle' => $receiptHandle,
+            ];
+        }
+        $result = $this->sqsClient->deleteMessageBatch([
+            'QueueUrl' => $this->queueUrl,
+            'Entries' => $entries,
+        ]);
+        if (count($result['Successful']) != count($receiptHandles)) {
+            Logger::error("something goes wrong with deletion: " . json_encode($receiptHandles));
+        }
+    }
+
     private static function getQueueUrl(SqsClient $sqsClient, string $queueName): ?string
     {
         try {
@@ -112,7 +151,7 @@ class QueueService
             }
             $queueUrl = (string)$result['QueueUrl'];
             if (!Validator::isUrlValid($queueUrl)) {
-                Logger::error("wrong QueueUrl is returned" . $queueUrl);
+                Logger::error("wrong QueueUrl is returned " . $queueUrl);
                 return null;
             }
             return $queueUrl;
