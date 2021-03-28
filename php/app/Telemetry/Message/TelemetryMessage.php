@@ -5,6 +5,7 @@ namespace App\Telemetry\Message;
 use App\Telemetry\Event\NetworkConnectionEvent;
 use App\Telemetry\Event\NewProcessEvent;
 use App\Utility\Logger;
+use App\Utility\Validator;
 
 class TelemetryMessage
 {
@@ -68,11 +69,6 @@ class TelemetryMessage
         $this->networkConnectionEvents[] = $networkConnectionEvent;
     }
 
-    private static function isUuid(string $str): bool
-    {
-        return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $str) === 1;
-    }
-
     /**
      * @param array $message
      * @return TelemetryMessage|null
@@ -99,7 +95,7 @@ class TelemetryMessage
             Logger::warning('message is invalid (no string submission_id) ' . json_encode($message));
             return null;
         }
-        if (!self::isUuid($body['submission_id'])) {
+        if (!Validator::isUuid($body['submission_id'])) {
             Logger::warning('message is invalid (submission_id is non-uuid) ' . json_encode($message));
             return null;
         }
@@ -108,7 +104,7 @@ class TelemetryMessage
             Logger::warning('message is invalid (no string device_id) ' . json_encode($message));
             return null;
         }
-        if (!self::isUuid($body['device_id'])) {
+        if (!Validator::isUuid($body['device_id'])) {
             Logger::warning('message is invalid (device_id is non-uuid) ' . json_encode($message));
             return null;
         }
