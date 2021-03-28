@@ -54,22 +54,6 @@ class TelemetryMessage
     }
 
     /**
-     * @param NewProcessEvent $newProcessEvent
-     */
-    private function addNewProcessEvent(NewProcessEvent $newProcessEvent): void
-    {
-        $this->newProcessEvents[] = $newProcessEvent;
-    }
-
-    /**
-     * @param NetworkConnectionEvent $networkConnectionEvent
-     */
-    private function addNetworkConnectionEvent(NetworkConnectionEvent $networkConnectionEvent): void
-    {
-        $this->networkConnectionEvents[] = $networkConnectionEvent;
-    }
-
-    /**
      * @param array $message
      * @return TelemetryMessage|null
      */
@@ -184,5 +168,21 @@ class TelemetryMessage
     public function getMessageIdMark(): string
     {
         return $this->submissionId . ':' . $this->deviceId . '(' . $this->timeCreated . ')';
+    }
+
+    /**
+     * @param NewProcessEvent $newProcessEvent
+     */
+    private function addNewProcessEvent(NewProcessEvent $newProcessEvent): void
+    {
+        $this->newProcessEvents[] = $newProcessEvent;
+    }
+
+    /**
+     * @param NetworkConnectionEvent $networkConnectionEvent
+     */
+    private function addNetworkConnectionEvent(NetworkConnectionEvent $networkConnectionEvent): void
+    {
+        $this->networkConnectionEvents[] = $networkConnectionEvent;
     }
 }
