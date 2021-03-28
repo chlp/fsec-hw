@@ -4,6 +4,7 @@ namespace App\Telemetry\Event;
 
 use App\Telemetry\Message\TelemetryMessage;
 use App\Utility\Logger;
+use App\Utility\Validator;
 
 class NetworkConnectionEvent extends TelemetryEvent
 {
@@ -38,11 +39,6 @@ class NetworkConnectionEvent extends TelemetryEvent
         $this->destinationPort = $destinationPort;
     }
 
-    private static function isIpv4Valid(string $ipv4): bool
-    {
-        return filter_var($ipv4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
-    }
-
     public static function createFromEventData(TelemetryMessage $message, array $eventData): ?self
     {
         if (!isset($eventData['source_ip']) || !is_string($eventData['source_ip'])) {
@@ -53,7 +49,7 @@ class NetworkConnectionEvent extends TelemetryEvent
             return null;
         }
         $sourceIp = $eventData['source_ip'];
-        if (!self::isIpv4Valid($sourceIp)) {
+        if (!Validator::isIpv4Valid($sourceIp)) {
             Logger::warning(
                 'source_ip is incorrect  ' . $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
@@ -67,7 +63,7 @@ class NetworkConnectionEvent extends TelemetryEvent
             return null;
         }
         $destinationIp = $eventData['destination_ip'];
-        if (!self::isIpv4Valid($destinationIp)) {
+        if (!Validator::isIpv4Valid($destinationIp)) {
             Logger::warning(
                 'destination_ip is incorrect  ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)

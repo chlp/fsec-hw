@@ -6,6 +6,7 @@ require __DIR__ . '/app/loader.php';
 use Aws\Sqs\SqsClient;
 use App\Telemetry\Message\TelemetryMessage;
 use App\Utility\Logger;
+use App\Utility\Validator;
 
 $queueName = "submissions";
 
@@ -19,11 +20,6 @@ $sqsClient = new SqsClient([
     ],
 ]);
 
-function isUrlValid(string $url): bool
-{
-    return filter_var($url, FILTER_VALIDATE_URL) !== false;
-}
-
 function getQueueUrl(SqsClient $sqsClient, string $queueName): ?string
 {
     try {
@@ -35,7 +31,7 @@ function getQueueUrl(SqsClient $sqsClient, string $queueName): ?string
             return null;
         }
         $queueUrl = (string)$result['QueueUrl'];
-        if (!isUrlValid($queueUrl)) {
+        if (!Validator::isUrlValid($queueUrl)) {
             Logger::error("wrong QueueUrl is returned" . $queueUrl);
             return null;
         }
