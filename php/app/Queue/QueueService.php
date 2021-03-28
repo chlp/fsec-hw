@@ -90,7 +90,7 @@ class QueueService
                 'WaitTimeSeconds' => $this->waitTimeSec,
             ));
         } catch (Exception $e) {
-            Logger::error(Logger::getExceptionMessage($e));
+            Logger::error('QueueService::receiveMessages() exception: ' . Logger::getExceptionMessage($e));
             return null;
         }
         if (!isset($result['Messages']) || !is_array($result['Messages'])) {

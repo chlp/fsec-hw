@@ -10,6 +10,10 @@ class Config
     private const DEFAULT_AWS_KEY = 'foo';
     private const DEFAULT_AWS_SECRET = 'bar';
 
+    private const DEFAULT_EVENTS_DATA_STREAM_NAME = 'wrong_stream_name';
+    private const DEFAULT_DATA_STREAM_MAX_BUFFER_SIZE = 100;
+    private const DEFAULT_DATA_STREAM_FLUSH_INTERVAL_SEC = 3;
+
     private const DEFAULT_SUBMISSIONS_QUEUE_NAME = 'wrong_queue_name';
     private const DEFAULT_QUEUE_MAX_NUMBER_OF_MESSAGE_PER_REQUEST = 10;
     private const DEFAULT_QUEUE_WAIT_TIME_SEC = 1;
@@ -62,6 +66,21 @@ class Config
     public function getAwsSecret(): string
     {
         return self::getStringFromEnv('AWS_SECRET', self::DEFAULT_AWS_SECRET);
+    }
+
+    public function getEventsDataStreamName(): string
+    {
+        return self::getStringFromEnv('EVENTS_DATA_STREAM_NAME', self::DEFAULT_EVENTS_DATA_STREAM_NAME);
+    }
+
+    public function getDataStreamMaxBufferSize(): int
+    {
+        return self::getIntFromEnv('DATA_STREAM_MAX_BUFFER_SIZE', self::DEFAULT_DATA_STREAM_MAX_BUFFER_SIZE);
+    }
+
+    public function getDataStreamFlushIntervalSec(): int
+    {
+        return self::getIntFromEnv('DATA_STREAM_FLUSH_INTERVAL_SEC', self::DEFAULT_DATA_STREAM_FLUSH_INTERVAL_SEC);
     }
 
     public function getSubmissionsQueueName(): string

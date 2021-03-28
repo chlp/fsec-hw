@@ -6,15 +6,21 @@
 // export AWS_ACCESS_KEY_ID=foo
 // export AWS_SECRET_ACCESS_KEY=bar
 
+use Aws\Kinesis\KinesisClient;
+
 $streamName = 'events';
-$totalNumberOfRecords = 1;
+$totalNumberOfRecords = 10;
 
 require_once 'vendor/autoload.php';
 $sdk = new \Aws\Sdk();
-$kinesisClient = $sdk->createKinesis([
+$kinesisClient = new KinesisClient([
 	'region' => 'eu-west-1',
 	'version' => 'latest',
 	'endpoint' => 'http://localhost:4566',
+    'credentials' => [
+        'key' => 'foo',
+        'secret'  => 'bar',
+    ],
 ]);
 
 /**
