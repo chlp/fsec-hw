@@ -141,6 +141,18 @@ class QueueService
             Logger::error('sqs messages are not array');
             return null;
         }
+
+        $receiptHandles = [];
+        foreach ($result['Messages'] as $i => $message) {
+            $receiptHandle = $this->getReceiptHandle($message);
+            if ($receiptHandle === null) {
+                Logger::error('QueueService::receiveMessages() error: can not find receiptHandle ' . json_encode($message));
+            }
+            $receiptHandles[] = $receiptHandle;
+        }
+        // todo: perhaps we can find out the current value of Visibility Timeout and if it matches, then do not make unnecessary calls
+        $this->changeMessagesVisibility($receiptHandles, $this->visibilityTimeoutSec);
+
         return $result['Messages'];
     }
 
@@ -155,11 +167,14 @@ class QueueService
     /**
      * Get the receipt handle (for the next deletion)
      * @param array $message - item from array (result of ::receiveMessages())
-     * @return string
+     * @return string|null
      */
-    public function getReceiptHandle(array $message): string
+    public function getReceiptHandle(array $message): ?string
     {
-        return $message['ReceiptHandle'];
+        if (isset($message['ReceiptHandle']) && is_string($message['ReceiptHandle'])) {
+            return $message['ReceiptHandle'];
+        }
+        return null;
     }
 
     /**
@@ -192,6 +207,40 @@ class QueueService
             return true;
         }
         return false;
+    }
+
+    public function changeMessagesVisibility(array $receiptHandles, int $visibilityTimeout): void
+    {
+        // todo: not tested yet
+        // todo: need to check the execution, need to decide how important it is
+        if (count($receiptHandles) === 0) {
+            return;
+        }
+        $entries = [];
+        foreach ($receiptHandles as $i => $receiptHandle) {
+            array_push($entries, [
+                'Id' => 'item_id_' . $i,
+                'ReceiptHandle' => $receiptHandle,
+                'VisibilityTimeout' => $visibilityTimeout
+            ]);
+        }
+        try {
+            $result = $this->sqsClient->changeMessageVisibilityBatch([
+                'Entries' => $entries,
+                'QueueUrl' => $this->queueUrl,
+            ]);
+            if (
+                !isset($result['Successful']) ||
+                !is_array($result['Successful']) ||
+                count($result['Successful']) !== count($receiptHandles)
+            ) {
+                // todo: parse result and check it and what we need to do than?
+                Logger::error('QueueService::changeMessagesVisibility() something failed');
+            }
+        } catch (Exception $e) {
+            Logger::error('QueueService::changeMessagesVisibility() exception: ' . Logger::getExceptionMessage($e));
+            return;
+        }
     }
 
     /**

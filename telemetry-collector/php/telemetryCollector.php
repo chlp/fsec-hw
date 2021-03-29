@@ -63,15 +63,20 @@ while (true) {
         usleep(100000); // sleep 0.1 sec. save cpu
     }
 
-    $eventsCount = 0;
+    $totalEventsCount = 0;
     foreach ($queueMessages as $queueMessage) {
         $telemetryMessage = TelemetryMessage::createFromQueueMessage($queueMessage);
         if ($telemetryMessage !== null) {
-            $receiptHandle = $queueService->getReceiptHandle($queueMessage);
             $telemetryMessageIdMark = $telemetryMessage->getMessageIdMark();
+            $receiptHandle = $queueService->getReceiptHandle($queueMessage);
+            if ($receiptHandle === null) {
+                Logger::error("Collector error: can not get receiptHandle: " . $telemetryMessageIdMark);
+                break;
+            }
             $telemetryMessageEvents = $telemetryMessage->getEvents();
             $eventsCount = count($telemetryMessageEvents);
             $eventsCountPerMessage[$receiptHandle] = $eventsCount;
+            $totalEventsCount += $eventsCount;
             $afterSendingCallback = function () use ($receiptHandle, $queueService, &$eventsCountPerMessage) {
                 $eventsCountPerMessage[$receiptHandle] -= 1;
                 if ($eventsCountPerMessage[$receiptHandle] === 0) {
@@ -92,5 +97,5 @@ while (true) {
         }
     }
 
-    Logger::info("Collect " . count($queueMessages) . " more messages ({$eventsCount} events)");
+    Logger::info("Collect " . count($queueMessages) . " more messages ({$totalEventsCount} events)");
 }
