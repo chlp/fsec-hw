@@ -305,3 +305,4 @@ earlier, other development participants ask questions earlier.
 * Graceful degradation. Application need to continue to work without unnecessary parts.
 * If the message SQS queue crashes or restarts, we will continue working, but what happens if the Kinesis data stream restarts?
 * Where are tests?
+* Application starts with several of errors, waiting for SQS Queue to start
