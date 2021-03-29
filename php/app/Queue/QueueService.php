@@ -189,16 +189,23 @@ class QueueService
             count($this->receiptHandlesToDelete) >= $this->maxReceiptsToDeleteAtOnce ||
             time() - $this->lastDeleteTimestamp > $this->receiptsToDeleteIntervalSec
         ) {
-            $this->deleteAccumulatedMessages();
+            foreach (array_chunk($this->receiptHandlesToDelete, $this->maxReceiptsToDeleteAtOnce) as $receiptHandles) {
+                $this->deleteMessages($receiptHandles);
+            }
+            $this->receiptHandlesToDelete = [];
+            $this->lastDeleteTimestamp = time();
             return true;
         }
         return false;
     }
 
-    private function deleteAccumulatedMessages(): void
+    /**
+     * @param array $receiptHandles
+     */
+    private function deleteMessages(array $receiptHandles): void
     {
         $entries = [];
-        foreach ($this->receiptHandlesToDelete as $i => $receiptHandle) {
+        foreach ($receiptHandles as $i => $receiptHandle) {
             $entries[] = [
                 'Id' => 'item_id_' . $i,
                 'ReceiptHandle' => $receiptHandle,
@@ -216,11 +223,10 @@ class QueueService
         if (!isset($result['Successful'])) {
             Logger::error("QueueService::deleteAccumulatedMessages() no Successful in result" . json_encode($result));
         }
-        if (count($result['Successful']) != count($this->receiptHandlesToDelete)) {
-            Logger::error("something goes wrong with deletion: " . json_encode($this->receiptHandlesToDelete));
+        if (count($result['Successful']) != count($receiptHandles)) {
+            Logger::error("something goes wrong with deletion: " . json_encode($receiptHandles));
         }
         // todo: need to parse $result and leave those entries in the array that have not been deleted
-        $this->receiptHandlesToDelete = [];
     }
 
     private static function getQueueUrl(SqsClient $sqsClient, string $queueName): ?string
