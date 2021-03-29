@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Queue;
+namespace App\DataStream;
 
-use App\Utility\Supervisor;
 use Aws\Kinesis\KinesisClient;
 use App\Utility\Logger;
 use Exception;
@@ -197,5 +196,25 @@ class DataStreamService
         }
 
         return true;
+    }
+
+    /**
+     * not tested yet
+     * @param int $count
+     */
+    public function updateShardsCount(int $count)
+    {
+        // todo: not tested yet
+        try {
+            $result = $this->kinesisClient->UpdateShardCount([
+                'ScalingType' => 'UNIFORM_SCALING',
+                'StreamName' => $this->streamName,
+                'TargetShardCount' => $count
+            ]);
+            var_dump($result);
+            // todo: parse result
+        } catch (Exception $e) {
+            Logger::error('DataStreamService::updateShardsCount() exception: ' . Logger::getExceptionMessage($e));
+        }
     }
 }

@@ -3,7 +3,8 @@
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/app/loader.php';
 
-use App\Queue\DataStreamService;
+use App\DataStream\DataStreamService;
+use App\DataStream\Supervisor;
 use App\Queue\QueueService;
 use App\Telemetry\Message\TelemetryMessage;
 use App\Utility\Config;
@@ -35,6 +36,7 @@ $dataStreamService = new DataStreamService(
     $conf->getDataStreamMaxBufferSize(),
     $conf->getDataStreamFlushIntervalSec()
 );
+Supervisor::createService($dataStreamService);
 
 while (true) {
     $isDataStreamFlushed = $dataStreamService->flushIfNeed();
@@ -63,6 +65,4 @@ while (true) {
             }
         }
     }
-
-    Logger::info("handled other " . count($queueMessages) . " messages");
 }
