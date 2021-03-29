@@ -189,7 +189,7 @@ class DataStreamService
             // todo: How to identify specific failed record?
             Logger::warning(
                 'DataStreamService::send() FailedRecordCount: ' . $res->get('FailedRecordCount') . '.' .
-                ' We will try again'
+                ' We will try again. Records count: ' . count($this->recordsBuffer)
             );
             // todo: if it did not work after the retry, then it needs to write error
             return false;

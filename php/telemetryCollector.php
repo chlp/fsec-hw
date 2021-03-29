@@ -38,6 +38,7 @@ $dataStreamService = new DataStreamService(
 );
 Supervisor::createService($dataStreamService);
 
+// todo: need to create other instances of this application, but need to prepare it: Supervisor & calculate the required amount of the app on every tick
 while (true) {
     $isDataStreamFlushed = $dataStreamService->flushIfNeed();
     $isQueueDeleted = $queueService->deleteAccumulatedMessagesIfNeed();
