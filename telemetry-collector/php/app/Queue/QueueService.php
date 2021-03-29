@@ -105,11 +105,11 @@ class QueueService
         $this->waitTimeSec = $waitTimeSec;
         $this->visibilityTimeoutSec = $visibilityTimeoutSec;
         $this->queueUrl = self::getQueueUrl($this->sqsClient, $this->queueName);
-        // bad fast fix
-        $this->queueUrl = str_replace(self::INSIDE_DOCKER_WRONG_ENDPOINT_FIX, $endpointUrl, $this->queueUrl);
         if ($this->queueUrl === null) {
             throw new Exception('Can not get queue url.');
         }
+        // bad fast fix
+        $this->queueUrl = str_replace(self::INSIDE_DOCKER_WRONG_ENDPOINT_FIX, $endpointUrl, $this->queueUrl);
         $this->maxReceiptsToDeleteAtOnce = $maxReceiptsToDeleteAtOnce;
         $this->receiptsToDeleteIntervalSec = $receiptsToDeleteIntervalSec;
         $this->receiptHandlesToDelete = [];
@@ -150,20 +150,6 @@ class QueueService
     public function isLongPollingWait(): bool
     {
         return $this->waitTimeSec > 0;
-    }
-
-    /**
-     * Get the receipt handles for the next deletion
-     * @param array $messages - result of ::receiveMessages()
-     * @return array
-     */
-    public function getReceiptHandles(array $messages): array
-    {
-        $receiptHandles = [];
-        foreach ($messages as $message) {
-            $receiptHandles[] = $message['ReceiptHandle'];
-        }
-        return $receiptHandles;
     }
 
     /**
@@ -244,19 +230,21 @@ class QueueService
             $result = $sqsClient->getQueueUrl([
                 'QueueName' => $queueName
             ]);
-            if (!isset($result['QueueUrl'])) {
-                error_log("QueueUrl is not returned");
-                return null;
-            }
-            $queueUrl = (string)$result['QueueUrl'];
-            if (!Validator::isUrlValid($queueUrl)) {
-                Logger::error("wrong QueueUrl is returned " . $queueUrl);
-                return null;
-            }
-            return $queueUrl;
         } catch (Exception $e) {
             Logger::error(Logger::getExceptionMessage($e));
+            return null;
         }
-        return null;
+
+        if (!isset($result['QueueUrl'])) {
+            error_log("QueueUrl is not returned");
+            return null;
+        }
+        $queueUrl = (string)$result['QueueUrl'];
+        if (!Validator::isUrlValid($queueUrl)) {
+            Logger::error("wrong QueueUrl is returned " . $queueUrl);
+            return null;
+        }
+
+        return $queueUrl;
     }
 }
