@@ -87,8 +87,10 @@ class NewProcessEvent extends TelemetryEvent
     public function toDataStreamRecord(): array
     {
         return array_merge($this->dataStreamRecordBase(), [
-            'cmdl' => $this->commandline,
-            'user' => $this->username,
+            'type_specific_data' => [
+                'cmdl' => $this->commandline,
+                'user' => $this->username,
+            ]
         ]);
     }
 }

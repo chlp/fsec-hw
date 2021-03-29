@@ -94,9 +94,11 @@ class NetworkConnectionEvent extends TelemetryEvent
     public function toDataStreamRecord(): array
     {
         return array_merge($this->dataStreamRecordBase(), [
-            'source_ip' => $this->sourceIp,
-            'destination_ip' => $this->destinationIp,
-            'destination_port' => $this->destinationPort,
+            'type_specific_data' => [
+                'source_ip' => $this->sourceIp,
+                'destination_ip' => $this->destinationIp,
+                'destination_port' => $this->destinationPort,
+            ]
         ]);
     }
 }
