@@ -85,9 +85,20 @@ Events are created from the data from messages and put to Kinesis data stream in
 This is a specific field. Need to know the details of how we can use it. Looks like we can't believe him, but we can use
 it for future analysis. We passing it as is.
 
+I have not found timezone inside time_created :(. If it were, we would be able to make assumptions about how fast
+messages reach us (about realtime).
+
+And yes, we have different ISO 8601 time format:
+
+```
+"time_processed": "2021-03-29T12:06:20+00:00"
+"time_created":   "2021-03-29T12:06:09.576033"
+```
+
 ### About `submission_id`
 
-I decided to leave it, although it was not in the requirements. It looks like it doesn't take up much space, and may be useful for analysis, but, of course, it is better to know the specifics to make a decision.
+I decided to leave it, although it was not in the requirements. It looks like it doesn't take up much space, and may be
+useful for analysis, but, of course, it is better to know the specifics to make a decision.
 
 ## Main functions
 
@@ -99,16 +110,26 @@ I decided to leave it, although it was not in the requirements. It looks like it
 
 ## Requirements
 
-* `each event is published as an individual record to kinesis` - Yes, in the code, this can be found next to the lines `telemetryCollector.php`:
+* `each event is published as an individual record to kinesis` - Yes, in the code, this can be found next to the
+  lines `telemetryCollector.php`:
+
 ```php
             foreach ($telemetryMessageEvents as $event) {
                 if (!$dataStreamService->putRecord($event->toDataStreamRecord(), $afterSendingCallback)) {
 ```
-* `each event must have information of the event type ("new_process" or "network_connection")` - Yes, each event has field `type` 
-* `each event must have an unique identifier` - Yes, each event has field `event_id`, but if we receive one event several times, it would have different `event_id`. I didn't have time to think about how to make it permanent for one message. It seems to be possible to assemble it from the submission_id, the type, and its position in the array.
-* `each event must have an identifier of the source device ("device_id")` - Yes, each event has field `device_id` with validated data
-* `each event must have a timestamp when it was processed (backend side time in UTC)` - Yes, each event has field `time_processed`
-* `submissions are validated and invalid or broken submissions are dropped` - Yes, and you can find all dropped data if turn on debug log `Logger.php`:
+
+* `each event must have information of the event type ("new_process" or "network_connection")` - Yes, each event has
+  field `type`
+* `each event must have an unique identifier` - Yes, each event has field `event_id`, but if we receive one event
+  several times, it would have different `event_id`. I didn't have time to think about how to make it permanent for one
+  message. It seems to be possible to assemble it from the submission_id, the type, and its position in the array.
+* `each event must have an identifier of the source device ("device_id")` - Yes, each event has field `device_id` with
+  validated data
+* `each event must have a timestamp when it was processed (backend side time in UTC)` - Yes, each event has
+  field `time_processed`
+* `submissions are validated and invalid or broken submissions are dropped` - Yes, and you can find all dropped data if
+  turn on debug log `Logger.php`:
+
 ```php
     public static function debug(string $message): void
     {
@@ -121,9 +142,20 @@ I decided to leave it, although it was not in the requirements. It looks like it
         }
     }
 ```
-* `must guarantee no data loss (for valid data), i.e. submissions must not be deleted before all events are succesfully published` - Yes, result application has an entity `DataStreamService` that can respond with callback after it puts data to the stream. We have a counter of events for each message `$eventsCountPerMessage`, and we delete a message when all events put to data stream. 
-* `must guarantee ordering of events in the context of a single submission` - It looks like it is. We keep the order of the elements in the array and pass it on. Although I am not completely sure that I understood this point completely correctly.
-* `the number of messages read from SQS with a single request must be configurable` - Yes, environment variable `QUEUE_MAX_NUMBER_OF_MESSAGE_PER_REQUEST`. 
-* `the visibility timeout of read SQS messages must be configurable` - Yes, environment variable `QUEUE_VISIBILITY_TIMEOUT_SEC`. Inside code `QueueService.php` `QueueService::changeMessagesVisibility()`, but I did not test that visibility timeout parameter of messages is change in fact. And I haven't worked out this method well enough. What should I do if I can't change it? Can we find out the current value of this parameter, so as not to make unnecessary calls, if it is the same value already.
+
+* `must guarantee no data loss (for valid data), i.e. submissions must not be deleted before all events are succesfully published`
+  - Yes, result application has an entity `DataStreamService` that can respond with callback after it puts data to the
+  stream. We have a counter of events for each message `$eventsCountPerMessage`, and we delete a message when all events
+  put to data stream.
+* `must guarantee ordering of events in the context of a single submission` - It looks like it is. We keep the order of
+  the elements in the array and pass it on. Although I am not completely sure that I understood this point completely
+  correctly.
+* `the number of messages read from SQS with a single request must be configurable` - Yes, environment
+  variable `QUEUE_MAX_NUMBER_OF_MESSAGE_PER_REQUEST`.
+* `the visibility timeout of read SQS messages must be configurable` - Yes, environment
+  variable `QUEUE_VISIBILITY_TIMEOUT_SEC`. Inside code `QueueService.php` `QueueService::changeMessagesVisibility()`,
+  but I did not test that visibility timeout parameter of messages is change in fact. And I haven't worked out this
+  method well enough. What should I do if I can't change it? Can we find out the current value of this parameter, so as
+  not to make unnecessary calls, if it is the same value already.
 
 ## Known issues and todo
