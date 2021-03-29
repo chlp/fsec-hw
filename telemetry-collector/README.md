@@ -306,3 +306,4 @@ earlier, other development participants ask questions earlier.
 * If the message SQS queue crashes or restarts, we will continue working, but what happens if the Kinesis data stream restarts?
 * Where are tests?
 * Application starts with several of errors, waiting for SQS Queue to start
+* php/vendor folder. Need to build the vendor folder via composer, not drag it around.
