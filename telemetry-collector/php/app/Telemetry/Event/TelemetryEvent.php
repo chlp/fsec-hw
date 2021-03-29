@@ -3,6 +3,7 @@
 namespace App\Telemetry\Event;
 
 use App\Telemetry\Message\TelemetryMessage;
+use App\Utility\Helper;
 use App\Utility\Logger;
 
 class TelemetryEvent
@@ -10,6 +11,11 @@ class TelemetryEvent
     const TYPE_NONE = 'none';
     const TYPE_NETWORK_CONNECTION = 'network_connection';
     const TYPE_NEW_PROCESS = 'new_process';
+
+    /**
+     * @var string
+     */
+    private $id;
 
     /**
      * @var TelemetryMessage
@@ -23,6 +29,7 @@ class TelemetryEvent
 
     protected function __construct(TelemetryMessage $message)
     {
+        $this->id = Helper::uuid();
         $this->type = self::TYPE_NONE;
         $this->message = $message;
     }
@@ -48,6 +55,7 @@ class TelemetryEvent
     protected function dataStreamRecordBase(): array
     {
         return [
+            'event_id' => $this->id,
             'type' => $this->type,
             'device_id' => $this->message->getDeviceId(),
             'submission_id' => $this->message->getSubmissionId(),

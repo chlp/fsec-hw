@@ -3,6 +3,7 @@
 namespace App;
 
 require __DIR__ . '/Utility/Config.php';
+require __DIR__ . '/Utility/Helper.php';
 require __DIR__ . '/Utility/Logger.php';
 require __DIR__ . '/Utility/Validator.php';
 require __DIR__ . '/DataStream/DataStreamService.php';
