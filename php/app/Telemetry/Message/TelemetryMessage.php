@@ -14,6 +14,10 @@ class TelemetryMessage
     private const TIMECREATED_VALID_NEWEST_DIFF = '+10 minutes'; // may be something wrong with clocks
 
     /**
+     * @var int UTC Timestamp
+     */
+    private $timeProcessed;
+    /**
      * @var string UUID
      */
     private $submissionId;
@@ -47,11 +51,17 @@ class TelemetryMessage
         int $timeCreated
     )
     {
+        $this->timeProcessed = time();
         $this->submissionId = $submissionId;
         $this->deviceId = $deviceId;
         $this->timeCreated = $timeCreated;
         $this->newProcessEvents = [];
         $this->networkConnectionEvents = [];
+    }
+
+    public function getTimeProcessed(): int
+    {
+        return $this->timeProcessed;
     }
 
     /**

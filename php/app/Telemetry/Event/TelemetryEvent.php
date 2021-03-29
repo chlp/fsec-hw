@@ -51,6 +51,7 @@ class TelemetryEvent
             'type' => $this->type,
             'device_id' => $this->message->getDeviceId(),
             'submission_id' => $this->message->getSubmissionId(),
+            'time_processed' => $this->message->getTimeProcessed(),
             'time_created' => $this->message->getTimeCreated(),
         ];
     }
