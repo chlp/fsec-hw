@@ -60,9 +60,8 @@ while (true) {
         if ($telemetryMessage !== null) {
             $receiptHandle = $queueService->getReceiptHandle($queueMessage);
             $telemetryMessageIdMark = $telemetryMessage->getMessageIdMark();
-            $newProcessEvents = $telemetryMessage->getNewProcessEvents();
-            $networkConnectionEvents = $telemetryMessage->getNetworkConnectionEvents();
-            $eventsCount = count($newProcessEvents) + count($networkConnectionEvents);;
+            $telemetryMessageEvents = $telemetryMessage->getEvents();
+            $eventsCount = count($telemetryMessageEvents);
             $eventsCountPerMessage[$receiptHandle] = $eventsCount;
             $afterSendingCallback = function () use ($receiptHandle, $queueService, &$eventsCountPerMessage) {
                 $eventsCountPerMessage[$receiptHandle] -= 1;
@@ -71,14 +70,11 @@ while (true) {
                     $queueService->deleteMessage($receiptHandle);
                 }
             };
-            foreach ($newProcessEvents as $newProcessEvent) {
-                if (!$dataStreamService->putRecord(['id' => $telemetryMessageIdMark], $afterSendingCallback)) {
-                    Logger::error("Collector error: can not save message, skip it: " . $telemetryMessageIdMark);
-                }
-            }
-            foreach ($networkConnectionEvents as $networkConnectionEvent) {
-                if (!$dataStreamService->putRecord(['id' => $telemetryMessageIdMark], $afterSendingCallback)) {
-                    Logger::error("Collector error: can not save message, skip it: " . $telemetryMessageIdMark);
+            foreach ($telemetryMessageEvents as $event) {
+                if (!$dataStreamService->putRecord($event->toDataStreamRecord(), $afterSendingCallback)) {
+                    $eventsCountPerMessage[$receiptHandle] -= 1;
+                    Logger::error("Collector error: can not put record, skip it: " . $event->idMark());
+                    // todo: if all of records from message we could not put. If we understand that we never could it. Need to delete this message from queue too.
                 }
             }
         } else {

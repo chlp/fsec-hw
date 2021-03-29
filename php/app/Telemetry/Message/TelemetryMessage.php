@@ -4,6 +4,7 @@ namespace App\Telemetry\Message;
 
 use App\Telemetry\Event\NetworkConnectionEvent;
 use App\Telemetry\Event\NewProcessEvent;
+use App\Telemetry\Event\TelemetryEvent;
 use App\Utility\Logger;
 use App\Utility\Validator;
 
@@ -187,18 +188,10 @@ class TelemetryMessage
     }
 
     /**
-     * @return NewProcessEvent[]
+     * @return TelemetryEvent[]
      */
-    public function getNewProcessEvents(): array
+    public function getEvents(): array
     {
-        return $this->newProcessEvents;
-    }
-
-    /**
-     * @return NetworkConnectionEvent[]
-     */
-    public function getNetworkConnectionEvents(): array
-    {
-        return $this->networkConnectionEvents;
+        return array_merge($this->newProcessEvents, $this->networkConnectionEvents);
     }
 }

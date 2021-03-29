@@ -34,6 +34,7 @@ class NetworkConnectionEvent extends TelemetryEvent
     private function __construct(TelemetryMessage $message, string $sourceIp, string $destinationIp, int $destinationPort)
     {
         parent::__construct($message);
+        $this->type = self::TYPE_NETWORK_CONNECTION;
         $this->sourceIp = $sourceIp;
         $this->destinationIp = $destinationIp;
         $this->destinationPort = $destinationPort;
@@ -88,5 +89,14 @@ class NetworkConnectionEvent extends TelemetryEvent
         }
 
         return new self($message, $sourceIp, $destinationIp, $destinationPort);
+    }
+
+    public function toDataStreamRecord(): array
+    {
+        return array_merge($this->dataStreamRecordBase(), [
+            'source_ip' => $this->sourceIp,
+            'destination_ip' => $this->destinationIp,
+            'destination_port' => $this->destinationPort,
+        ]);
     }
 }

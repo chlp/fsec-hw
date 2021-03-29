@@ -30,6 +30,7 @@ class NewProcessEvent extends TelemetryEvent
     private function __construct(TelemetryMessage $message, string $commandline, string $username)
     {
         parent::__construct($message);
+        $this->type = self::TYPE_NEW_PROCESS;
         $this->commandline = $commandline;
         $this->username = $username;
     }
@@ -81,5 +82,13 @@ class NewProcessEvent extends TelemetryEvent
         }
 
         return new self($message, $cmdl, $user);
+    }
+
+    public function toDataStreamRecord(): array
+    {
+        return array_merge($this->dataStreamRecordBase(), [
+            'cmdl' => $this->commandline,
+            'user' => $this->username,
+        ]);
     }
 }
