@@ -184,10 +184,9 @@ class DataStreamService
         }
 
         if ($res->get('FailedRecordCount') !== 0) {
-            var_dump(count($this->recordsBuffer));
-            var_dump($res->__toString());
             // now i retry to send records and it works, but what if it does not work because of summary buffer size?
             // todo: need to learn to break the buffer into smaller pieces and try to send them in parts
+            // todo: if it is problem with the same data, may be we can log it and drop? so as not to hang in an infinite loop on one record
             // todo: How to identify specific failed record?
             Logger::error('DataStreamService::send() FailedRecordCount: ' . $res->get('FailedRecordCount'));
             return false;
