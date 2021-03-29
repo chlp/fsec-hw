@@ -9,6 +9,9 @@ use Exception;
 
 class QueueService
 {
+    // todo: no time to figure it out :(
+    const INSIDE_DOCKER_WRONG_ENDPOINT_FIX = 'http://localhost:4566';
+
     /**
      * @var SqsClient
      */
@@ -102,6 +105,8 @@ class QueueService
         $this->waitTimeSec = $waitTimeSec;
         $this->visibilityTimeoutSec = $visibilityTimeoutSec;
         $this->queueUrl = self::getQueueUrl($this->sqsClient, $this->queueName);
+        // bad fast fix
+        $this->queueUrl = str_replace(self::INSIDE_DOCKER_WRONG_ENDPOINT_FIX, $endpointUrl, $this->queueUrl);
         if ($this->queueUrl === null) {
             throw new Exception('Can not get queue url.');
         }
