@@ -18,6 +18,8 @@ I saved the original task environment and added one new service:
 To launch the services, use `docker-compose up -d`. This will launch localstack, sensor-fleet and telemetry-collector to
 run on the background. Previously lets look at environment variables.
 
+_Application starts with several of errors, waiting for SQS Queue to start._
+
 ### Environment variables
 
 Inside `docker-compose.yml` you can find several environment variables for service `telemetry-collector`. Main of them:
