@@ -301,9 +301,14 @@ earlier, other development participants ask questions earlier.
 ## Known issues and todo
 
 * Large number of todos
-* Gracefully app termination. After receiving the termination signal, the application should stop taking new messages from the queue, process the already loaded ones, and exit.
+* Gracefully app termination. After receiving the termination signal, the application should stop taking new messages
+  from the queue, process the already loaded ones, and exit.
 * Graceful degradation. Application need to continue to work without unnecessary parts.
-* If the message SQS queue crashes or restarts, we will continue working, but what happens if the Kinesis data stream restarts?
+* If the message SQS queue crashes or restarts, we will continue working, but what happens if the Kinesis data stream
+  restarts?
 * Where are tests?
 * Application starts with several of errors, waiting for SQS Queue to start
 * php/vendor folder. Need to build the vendor folder via composer, not drag it around.
+* php not the best option for an implemented application (I want more than one thread or event loop), but it's the most
+  comfortable language for me. Because SQS and Kinesis are both new technologies for me, plus there are only 2 days, I
+  wanted to minimize uncomfortable tools.
