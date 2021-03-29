@@ -31,7 +31,7 @@ while ($queueService === null) {
     } catch (Exception $e) {
         Logger::error('Collector can not create QueueService: ' . Logger::getExceptionMessage($e));
         Logger::info('Sleep for a while and retry');
-        sleep(2);
+        sleep(5);
     }
 }
 
@@ -46,6 +46,8 @@ $dataStreamService = new DataStreamService(
     $conf->getDataStreamFlushIntervalSec()
 );
 Supervisor::createService($dataStreamService);
+
+Logger::info("Application successfully started");
 
 // todo: need to create other instances of this application, but need to prepare it: Supervisor & calculate the required amount of the app on every tick
 $eventsCountPerMessage = [];
