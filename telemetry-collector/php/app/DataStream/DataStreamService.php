@@ -114,6 +114,7 @@ class DataStreamService
             $this->lastFlushTimestamp = time();
             return false;
         }
+        // todo: need to check summary total size of buffer. We know that maximum is 1Mb.
         if (
             count($this->recordsBuffer) >= $this->maxBufferSize ||
             time() - $this->lastFlushTimestamp > $this->flushIntervalSec
