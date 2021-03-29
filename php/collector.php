@@ -39,7 +39,7 @@ while (true) {
     $isQueueDeleted = $queueService->deleteAccumulatedMessagesIfNeed();
     $queueMessages = $queueService->receiveMessages(); // long polling wait
     if ($queueMessages === null) {
-        var_dump('fail');
+        Logger::error("Collector error: can not receive messages, sleep for a sec.");
         sleep(1);
         continue;
     }
