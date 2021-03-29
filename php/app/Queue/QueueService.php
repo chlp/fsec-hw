@@ -125,7 +125,10 @@ class QueueService
             Logger::error('QueueService::receiveMessages() exception: ' . Logger::getExceptionMessage($e));
             return null;
         }
-        if (!isset($result['Messages']) || !is_array($result['Messages'])) {
+        if (!isset($result['Messages'])) {
+            return [];
+        }
+        if (!is_array($result['Messages'])) {
             Logger::error('sqs messages are not array');
             return null;
         }
@@ -201,10 +204,18 @@ class QueueService
                 'ReceiptHandle' => $receiptHandle,
             ];
         }
-        $result = $this->sqsClient->deleteMessageBatch([
-            'QueueUrl' => $this->queueUrl,
-            'Entries' => $entries,
-        ]);
+        try {
+            $result = $this->sqsClient->deleteMessageBatch([
+                'QueueUrl' => $this->queueUrl,
+                'Entries' => $entries,
+            ]);
+        } catch (Exception $e) {
+            Logger::error('QueueService::deleteAccumulatedMessages() exception: ' . Logger::getExceptionMessage($e));
+            return;
+        }
+        if (!isset($result['Successful'])) {
+            Logger::error("QueueService::deleteAccumulatedMessages() no Successful in result" . json_encode($result));
+        }
         if (count($result['Successful']) != count($this->receiptHandlesToDelete)) {
             Logger::error("something goes wrong with deletion: " . json_encode($this->receiptHandlesToDelete));
         }

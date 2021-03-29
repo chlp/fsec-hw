@@ -188,7 +188,11 @@ class DataStreamService
             // todo: need to learn to break the buffer into smaller pieces and try to send them in parts
             // todo: if it is problem with the same data, may be we can log it and drop? so as not to hang in an infinite loop on one record
             // todo: How to identify specific failed record?
-            Logger::error('DataStreamService::send() FailedRecordCount: ' . $res->get('FailedRecordCount'));
+            Logger::warning(
+                'DataStreamService::send() FailedRecordCount: ' . $res->get('FailedRecordCount') . '.' .
+                ' We will try again'
+            );
+            // todo: if it did not work after the retry, then it needs to write error
             return false;
         }
 

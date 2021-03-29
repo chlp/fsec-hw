@@ -10,11 +10,14 @@ class Logger
     private const WARNING = 'Warning';
     private const INFO = 'Info';
 
+    private const MAX_MESSAGE_SIZE = 512;
+
     /**
      * @throws Exception
      */
     private function __construct()
     {
+        // todo: we can use instances of the class and remember fields when creating it
         throw new Exception('Logger is Utility Class. Only static methods.');
     }
 
@@ -31,7 +34,7 @@ class Logger
     {
         self::writeLog([
             'level' => self::ERROR,
-            'message' => $message,
+            'message' => substr($message, 0, self::MAX_MESSAGE_SIZE),
         ]);
     }
 
@@ -39,7 +42,7 @@ class Logger
     {
         self::writeLog([
             'level' => self::WARNING,
-            'message' => $message,
+            'message' => substr($message, 0, self::MAX_MESSAGE_SIZE),
         ]);
     }
 
@@ -47,7 +50,7 @@ class Logger
     {
         self::writeLog([
             'level' => self::INFO,
-            'message' => $message,
+            'message' => substr($message, 0, self::MAX_MESSAGE_SIZE),
         ]);
     }
 

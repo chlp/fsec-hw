@@ -42,7 +42,7 @@ class NetworkConnectionEvent extends TelemetryEvent
     public static function createFromEventData(TelemetryMessage $message, array $eventData): ?self
     {
         if (!isset($eventData['source_ip']) || !is_string($eventData['source_ip'])) {
-            Logger::warning(
+            Logger::info(
                 'event data is invalid (no correct source_ip) ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
@@ -50,13 +50,14 @@ class NetworkConnectionEvent extends TelemetryEvent
         }
         $sourceIp = $eventData['source_ip'];
         if (!Validator::isIpv4Valid($sourceIp)) {
-            Logger::warning(
-                'source_ip is incorrect  ' . $message->getMessageIdMark() . ' ' . json_encode($eventData)
+            Logger::info(
+                'source_ip is incorrect  ' . $sourceIp . ' ' .
+                $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
         }
 
         if (!isset($eventData['destination_ip']) || !is_string($eventData['destination_ip'])) {
-            Logger::warning(
+            Logger::info(
                 'event data is invalid (no correct destination_ip) ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
@@ -64,14 +65,14 @@ class NetworkConnectionEvent extends TelemetryEvent
         }
         $destinationIp = $eventData['destination_ip'];
         if (!Validator::isIpv4Valid($destinationIp)) {
-            Logger::warning(
-                'destination_ip is incorrect  ' .
+            Logger::info(
+                'destination_ip is incorrect  ' . $destinationIp . ' ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
         }
 
         if (!isset($eventData['destination_port']) || !is_int($eventData['destination_port'])) {
-            Logger::warning(
+            Logger::info(
                 'event data is invalid (no correct destination_port) ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
@@ -79,8 +80,8 @@ class NetworkConnectionEvent extends TelemetryEvent
         }
         $destinationPort = $eventData['destination_port'];
         if ($destinationPort < self::MIN_VALID_PORT && $destinationPort > self::MAX_VALID_PORT) {
-            Logger::warning(
-                'destination_port is incorrect  ' .
+            Logger::info(
+                'destination_port is incorrect  ' . $destinationPort . ' ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
             return null;

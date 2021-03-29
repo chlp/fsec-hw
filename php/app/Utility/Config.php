@@ -18,7 +18,7 @@ class Config
     private const DEFAULT_QUEUE_MAX_NUMBER_OF_MESSAGE_PER_REQUEST = 10;
     private const DEFAULT_QUEUE_WAIT_TIME_SEC = 1;
     private const DEFAULT_QUEUE_VISIBILITY_TIMEOUT_SEC = 30;
-    private const DEFAULT_QUEUE_MAX_RECEIPTS_TO_DELETE_AT_ONCE = 50;
+    private const DEFAULT_QUEUE_MAX_RECEIPTS_TO_DELETE_AT_ONCE = 10;
     private const DEFAULT_QUEUE_RECEIPTS_TO_DELETE_INTERVAL_SEC = 3;
 
     private function __construct()

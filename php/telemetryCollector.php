@@ -3,13 +3,15 @@
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/app/loader.php';
 
+use App\Queue\DataStreamService;
+use App\Queue\QueueService;
 use App\Telemetry\Message\TelemetryMessage;
 use App\Utility\Config;
 use App\Utility\Logger;
 
 $conf = Config::create();
 
-$queueService = new \App\Queue\QueueService(
+$queueService = new QueueService(
     $conf->getAwsRegion(),
     $conf->getAwsVersion(),
     $conf->getAwsEndpoint(),
@@ -23,7 +25,7 @@ $queueService = new \App\Queue\QueueService(
     $conf->getQueueReceiptsToDeleteIntervalSec()
 );
 
-$dataStreamService = new \App\Queue\DataStreamService(
+$dataStreamService = new DataStreamService(
     $conf->getAwsRegion(),
     $conf->getAwsVersion(),
     $conf->getAwsEndpoint(),
@@ -61,4 +63,6 @@ while (true) {
             }
         }
     }
+
+    Logger::info("handled other " . count($queueMessages) . " messages");
 }

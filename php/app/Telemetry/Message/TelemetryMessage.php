@@ -76,32 +76,32 @@ class TelemetryMessage
         }
 
         if (!isset($body['submission_id']) || !is_string($body['submission_id'])) {
-            Logger::warning('message is invalid (no string submission_id) ' . json_encode($message));
+            Logger::info('message is invalid (no string submission_id) ' . json_encode($message));
             return null;
         }
         if (!Validator::isUuid($body['submission_id'])) {
-            Logger::warning('message is invalid (submission_id is non-uuid) ' . json_encode($message));
+            Logger::info('message is invalid (submission_id is non-uuid) ' . $body['submission_id'] . ' ' . json_encode($message));
             return null;
         }
 
         if (!isset($body['device_id']) || !is_string($body['device_id'])) {
-            Logger::warning('message is invalid (no string device_id) ' . json_encode($message));
+            Logger::info('message is invalid (no string device_id) ' . json_encode($message));
             return null;
         }
         if (!Validator::isUuid($body['device_id'])) {
-            Logger::warning('message is invalid (device_id is non-uuid) ' . json_encode($message));
+            Logger::info('message is invalid (device_id is non-uuid) ' . $body['device_id'] . ' ' . json_encode($message));
             return null;
         }
 
         if (!isset($body['time_created']) || !is_string($body['time_created'])) {
-            Logger::warning('message is invalid (no string time_created) ' . json_encode($message));
+            Logger::info('message is invalid (no string time_created) ' . json_encode($message));
             return null;
         }
         $timeCreated = strtotime($body['time_created']);
         if (
             $timeCreated < strtotime(self::TIMECREATED_VALID_OLDEST_DIFF) ||
             $timeCreated > strtotime(self::TIMECREATED_VALID_NEWEST_DIFF)) {
-            Logger::warning('message is invalid (time_created is out of valid scope) ' . json_encode($message));
+            Logger::info('message is invalid (time_created is out of valid scope) ' . json_encode($message));
             return null;
         }
 
@@ -109,17 +109,17 @@ class TelemetryMessage
 
         $events = $body['events'];
         if (!is_array($events)) {
-            Logger::warning('message is invalid (events is not an array) ' . json_encode($message));
+            Logger::info('message is invalid (events is not an array) ' . json_encode($message));
             return null;
         }
 
         if (!is_array($events['new_process'])) {
-            Logger::warning('message is invalid (events.new_process is not an array) ' . json_encode($message));
+            Logger::info('message is invalid (events.new_process is not an array) ' . json_encode($message));
             return null;
         }
         foreach ($events['new_process'] as $newProcessEventData) {
             if (!is_array($newProcessEventData)) {
-                Logger::warning('new_process event is invalid ' . json_encode($message));
+                Logger::info('new_process event is invalid ' . json_encode($message));
             } else {
                 $event = NewProcessEvent::createFromEventData($telemetryMessage, $newProcessEventData);
                 if ($event !== null) {
@@ -129,12 +129,12 @@ class TelemetryMessage
         }
 
         if (!is_array($events['network_connection'])) {
-            Logger::warning('message is invalid (events.network_connection is not an array) ' . json_encode($message));
+            Logger::info('message is invalid (events.network_connection is not an array) ' . json_encode($message));
             return null;
         }
         foreach ($events['network_connection'] as $networkConnectionEventData) {
             if (!is_array($networkConnectionEventData)) {
-                Logger::warning('network_connection event is invalid ' . json_encode($message));
+                Logger::info('network_connection event is invalid ' . json_encode($message));
             } else {
                 $event = NetworkConnectionEvent::createFromEventData($telemetryMessage, $networkConnectionEventData);
                 if ($event !== null) {
