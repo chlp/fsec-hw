@@ -5,6 +5,7 @@ require __DIR__ . '/app/loader.php';
 
 use App\Telemetry\Message\TelemetryMessage;
 use App\Utility\Config;
+use App\Utility\Logger;
 
 $conf = Config::create();
 
@@ -17,7 +18,9 @@ $queueService = new \App\Queue\QueueService(
     $conf->getSubmissionsQueueName(),
     $conf->getQueueMaxNumberOfMessagePerRequest(),
     $conf->getQueueWaitTimeSec(),
-    $conf->getQueueVisibilityTimeoutSec()
+    $conf->getQueueVisibilityTimeoutSec(),
+    $conf->getQueueMaxReceiptsToDeleteAtOnce(),
+    $conf->getQueueReceiptsToDeleteIntervalSec()
 );
 
 $dataStreamService = new \App\Queue\DataStreamService(
@@ -32,23 +35,30 @@ $dataStreamService = new \App\Queue\DataStreamService(
 );
 
 while (true) {
-    $dataStreamService->flushIfNeed();
-
-    $messages = $queueService->receiveMessages(); // long polling wait
-    if ($messages === null) {
+    $isDataStreamFlushed = $dataStreamService->flushIfNeed();
+    $isQueueDeleted = $queueService->deleteAccumulatedMessagesIfNeed();
+    $queueMessages = $queueService->receiveMessages(); // long polling wait
+    if ($queueMessages === null) {
         var_dump('fail');
         sleep(1);
         continue;
     }
 
-    $receiptHandles = $queueService->getReceiptHandles($messages);
+    if (!$isDataStreamFlushed && !$isQueueDeleted && count($queueMessages) === 0 && !$queueService->isLongPollingWait()) {
+        usleep(1000); // sleep 0.1 sec. save cpu
+    }
 
-    foreach ($messages as $message) {
-        $telemetryMessage = TelemetryMessage::createFromQueueMessage($message);
+    foreach ($queueMessages as $queueMessage) {
+        $telemetryMessage = TelemetryMessage::createFromQueueMessage($queueMessage);
         if ($telemetryMessage !== null) {
-            echo $telemetryMessage->getMessageIdMark() . "\n";
-            $dataStreamService->putMessage(['id' => $telemetryMessage->getMessageIdMark()]);
+            $telemetryMessageIdMark = $telemetryMessage->getMessageIdMark();
+            $receiptHandle = $queueService->getReceiptHandle($queueMessage);
+            $onDeleteCallback = function () use ($receiptHandle, $queueService) {
+                $queueService->deleteMessage($receiptHandle);
+            };
+            if (!$dataStreamService->putRecord(['id' => $telemetryMessageIdMark], $onDeleteCallback)) {
+                Logger::error("Collector error: can not save message, skip it: " . $telemetryMessageIdMark);
+            }
         }
     }
-    // todo: need to delete
 }

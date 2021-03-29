@@ -9,6 +9,8 @@ use Exception;
 
 class DataStreamService
 {
+    const MAX_SIZE_OF_RECORD = 1024 * 1024 * 1024;
+
     /**
      * @var KinesisClient
      */
@@ -27,7 +29,7 @@ class DataStreamService
     /**
      * @var int
      */
-    private $maxBufferFlushIntervalSec;
+    private $flushIntervalSec;
 
     /**
      * @var int
@@ -42,7 +44,7 @@ class DataStreamService
     /**
      * @var callable[]
      */
-    private $toCallAfterSending;
+    private $onDeleteCallbacksBuffer;
 
     /**
      * DataStreamService constructor.
@@ -53,7 +55,7 @@ class DataStreamService
      * @param string $secret
      * @param string $streamName
      * @param int $maxBufferSize
-     * @param int $maxBufferFlushIntervalSec
+     * @param int $flushIntervalSec
      */
     public function __construct(
         string $region,
@@ -63,7 +65,7 @@ class DataStreamService
         string $secret,
         string $streamName,
         int $maxBufferSize,
-        int $maxBufferFlushIntervalSec
+        int $flushIntervalSec
     )
     {
         $this->kinesisClient = new KinesisClient([
@@ -77,38 +79,50 @@ class DataStreamService
         ]);
         $this->streamName = $streamName;
         $this->maxBufferSize = $maxBufferSize;
-        $this->maxBufferFlushIntervalSec = $maxBufferFlushIntervalSec;
+        $this->flushIntervalSec = $flushIntervalSec;
         $this->recordsBuffer = [];
-        $this->toCallAfterSending = [];
-        $this->lastFlushTimestamp = 0;
+        $this->onDeleteCallbacksBuffer = [];
+        $this->lastFlushTimestamp = time();
     }
 
     /**
-     * Putting message to the buffer before it would be sent to data stream
+     * Putting record to the buffer before it would be sent to data stream
      * @param array $data
+     * @param callable $onDeleteCallback - will be called after putting record to data stream
+     * @return bool - true on success; false if we can never deliver this message
      */
-    public function putMessage(array $data): void
+    public function putRecord(array $data, callable $onDeleteCallback): bool
     {
+        $record = json_encode($data, JSON_UNESCAPED_UNICODE);
+        if ($this->sizeOfRecord($record) > self::MAX_SIZE_OF_RECORD) {
+            // todo: we can truncate record here to fit in the size
+            Logger::warning('DataStreamService::putRecord() record size too big: ' . substr($record, 0, 256));
+            return false;
+        }
         $this->recordsBuffer[] = json_encode($data, JSON_UNESCAPED_UNICODE);
+        $this->onDeleteCallbacksBuffer[] = $onDeleteCallback;
         $this->flushIfNeed();
-    }
-
-    public function putCallbackOnSuccessSending(callable $func): void
-    {
-        $this->toCallAfterSending[] = $func;
+        return true;
     }
 
     /**
      * flush the buffer if records count more than max or time has come
+     * @return bool - true if flushed
      */
-    public function flushIfNeed(): void
+    public function flushIfNeed(): bool
     {
+        if (count($this->recordsBuffer) === 0) {
+            $this->lastFlushTimestamp = time();
+            return false;
+        }
         if (
             count($this->recordsBuffer) >= $this->maxBufferSize ||
-            time() - $this->lastFlushTimestamp > $this->maxBufferFlushIntervalSec
+            time() - $this->lastFlushTimestamp > $this->flushIntervalSec
         ) {
             $this->flush();
+            return true;
         }
+        return false;
     }
 
     /**
@@ -116,25 +130,35 @@ class DataStreamService
      */
     private function flush(): void
     {
-        if (count($this->recordsBuffer) === 0) {
-            $this->lastFlushTimestamp = time();
-            return;
-        }
-
         if ($this->send()) {
-            foreach ($this->toCallAfterSending as $callable) {
+            foreach ($this->onDeleteCallbacksBuffer as $callback) {
                 try {
-                    $callable();
+                    call_user_func($callback);
                 } catch (Exception $e) {
-                    Logger::warning('DataStreamService::flush() callable exception: ' . Logger::getExceptionMessage($e));
+                    Logger::warning('DataStreamService::flush() callback exception: ' . Logger::getExceptionMessage($e));
                 }
             }
+            // no need to use mutex or locker, because it is only inside current php application
+            // if we want to use a distributed buffer, we need to remember to synchronize this resources
             $this->lastFlushTimestamp = time();
             $this->recordsBuffer = [];
-            $this->toCallAfterSending = [];
+            $this->onDeleteCallbacksBuffer = [];
         }
     }
 
+    /**
+     * @param string $record - json string
+     * @return int - bytes
+     */
+    private function sizeOfRecord(string $record): int
+    {
+        return strlen(base64_encode($record));
+    }
+
+    /**
+     * PutRecords from buffer to the DataStream
+     * @return bool
+     */
     private function send(): bool
     {
         $parameter = [
@@ -143,27 +167,29 @@ class DataStreamService
         ];
 
         $sizeOfRecordsToSend = 0;
-        foreach ($this->recordsBuffer as $record) {
+        foreach ($this->recordsBuffer as $i => $record) {
             $parameter['Records'][] = [
                 'Data' => $record,
                 'PartitionKey' => md5($record)
             ];
-            $sizeOfRecordsToSend += strlen(base64_encode($record));
+            $sizeOfRecordsToSend += $this->sizeOfRecord($record);
         }
-        Supervisor::moreDataStreamMessagesSent(count($this->recordsBuffer), $sizeOfRecordsToSend);
+        Supervisor::moreDataStreamRecordsSent(count($this->recordsBuffer), $sizeOfRecordsToSend);
 
         try {
             $res = $this->kinesisClient->putRecords($parameter);
         } catch (Exception $e) {
-            Logger::error('DataStreamService::sendRecords() exception: ' . Logger::getExceptionMessage($e));
+            Logger::error('DataStreamService::send() putRecords exception: ' . Logger::getExceptionMessage($e));
             return false;
         }
 
         if ($res->get('FailedRecordCount') !== 0) {
             var_dump(count($this->recordsBuffer));
             var_dump($res->__toString());
-            // todo: What can i do here? Can i detect the wrong record and if I so, what?
-            Logger::error('DataStreamService::sendRecords() FailedRecordCount: ' . $res->get('FailedRecordCount'));
+            // now i retry to send records and it works, but what if it does not work because of summary buffer size?
+            // todo: need to learn to break the buffer into smaller pieces and try to send them in parts
+            // todo: How to identify specific failed record?
+            Logger::error('DataStreamService::send() FailedRecordCount: ' . $res->get('FailedRecordCount'));
             return false;
         }
 

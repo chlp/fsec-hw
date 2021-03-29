@@ -40,6 +40,26 @@ class QueueService
     private $visibilityTimeoutSec;
 
     /**
+     * @var array
+     */
+    private $receiptHandlesToDelete;
+
+    /**
+     * @var int
+     */
+    private $maxReceiptsToDeleteAtOnce;
+
+    /**
+     * @var int
+     */
+    private $receiptsToDeleteIntervalSec;
+
+    /**
+     * @var int - timestamp
+     */
+    private $lastDeleteTimestamp;
+
+    /**
      * QueueService constructor.
      * @param string $region
      * @param string $version
@@ -50,6 +70,8 @@ class QueueService
      * @param int $maxNumberOfMessagePerRequest
      * @param int $waitTimeSec
      * @param int $visibilityTimeoutSec
+     * @param int $maxReceiptsToDeleteAtOnce
+     * @param int $receiptsToDeleteIntervalSec
      */
     public function __construct(
         string $region,
@@ -60,7 +82,9 @@ class QueueService
         string $queueName,
         int $maxNumberOfMessagePerRequest,
         int $waitTimeSec,
-        int $visibilityTimeoutSec
+        int $visibilityTimeoutSec,
+        int $maxReceiptsToDeleteAtOnce,
+        int $receiptsToDeleteIntervalSec
     )
     {
         $this->sqsClient = new SqsClient([
@@ -77,6 +101,10 @@ class QueueService
         $this->waitTimeSec = $waitTimeSec;
         $this->visibilityTimeoutSec = $visibilityTimeoutSec;
         $this->queueUrl = self::getQueueUrl($this->sqsClient, $this->queueName);
+        $this->maxReceiptsToDeleteAtOnce = $maxReceiptsToDeleteAtOnce;
+        $this->receiptsToDeleteIntervalSec = $receiptsToDeleteIntervalSec;
+        $this->receiptHandlesToDelete = [];
+        $this->lastDeleteTimestamp = time();
     }
 
     /**
@@ -105,6 +133,14 @@ class QueueService
     }
 
     /**
+     * @return bool - true if use a long polling wait
+     */
+    public function isLongPollingWait(): bool
+    {
+        return $this->waitTimeSec > 0;
+    }
+
+    /**
      * Get the receipt handles for the next deletion
      * @param array $messages - result of ::receiveMessages()
      * @return array
@@ -119,12 +155,47 @@ class QueueService
     }
 
     /**
-     * @param array $receiptHandles - result of getReceiptHandles
+     * Get the receipt handle (for the next deletion)
+     * @param array $message - item from array (result of ::receiveMessages())
+     * @return string
      */
-    public function deleteMessages(array $receiptHandles): void
+    public function getReceiptHandle(array $message): string
+    {
+        return $message['ReceiptHandle'];
+    }
+
+    /**
+     * @param string $receiptHandle - result from ::getReceiptHandle(). Not immediately
+     */
+    public function deleteMessage(string $receiptHandle): void
+    {
+        $this->receiptHandlesToDelete[] = $receiptHandle;
+        $this->deleteAccumulatedMessagesIfNeed();
+    }
+
+    /**
+     * @return bool - true if needed
+     */
+    public function deleteAccumulatedMessagesIfNeed(): bool
+    {
+        if (count($this->receiptHandlesToDelete) === 0) {
+            $this->lastDeleteTimestamp = time();
+            return false;
+        }
+        if (
+            count($this->receiptHandlesToDelete) >= $this->maxReceiptsToDeleteAtOnce ||
+            time() - $this->lastDeleteTimestamp > $this->receiptsToDeleteIntervalSec
+        ) {
+            $this->deleteAccumulatedMessages();
+            return true;
+        }
+        return false;
+    }
+
+    private function deleteAccumulatedMessages(): void
     {
         $entries = [];
-        foreach ($receiptHandles as $i => $receiptHandle) {
+        foreach ($this->receiptHandlesToDelete as $i => $receiptHandle) {
             $entries[] = [
                 'Id' => 'item_id_' . $i,
                 'ReceiptHandle' => $receiptHandle,
@@ -134,9 +205,11 @@ class QueueService
             'QueueUrl' => $this->queueUrl,
             'Entries' => $entries,
         ]);
-        if (count($result['Successful']) != count($receiptHandles)) {
-            Logger::error("something goes wrong with deletion: " . json_encode($receiptHandles));
+        if (count($result['Successful']) != count($this->receiptHandlesToDelete)) {
+            Logger::error("something goes wrong with deletion: " . json_encode($this->receiptHandlesToDelete));
         }
+        // todo: need to parse $result and leave those entries in the array that have not been deleted
+        $this->receiptHandlesToDelete = [];
     }
 
     private static function getQueueUrl(SqsClient $sqsClient, string $queueName): ?string
