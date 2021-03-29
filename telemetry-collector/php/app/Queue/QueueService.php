@@ -209,7 +209,7 @@ class QueueService
         return false;
     }
 
-    public function changeMessagesVisibility(array $receiptHandles, int $visibilityTimeout): void
+    private function changeMessagesVisibility(array $receiptHandles, int $visibilityTimeout): void
     {
         // todo: not tested yet
         // todo: need to check the execution, need to decide how important it is

@@ -124,6 +124,6 @@ I decided to leave it, although it was not in the requirements. It looks like it
 * `must guarantee no data loss (for valid data), i.e. submissions must not be deleted before all events are succesfully published` - Yes, result application has an entity `DataStreamService` that can respond with callback after it puts data to the stream. We have a counter of events for each message `$eventsCountPerMessage`, and we delete a message when all events put to data stream. 
 * `must guarantee ordering of events in the context of a single submission` - It looks like it is. We keep the order of the elements in the array and pass it on. Although I am not completely sure that I understood this point completely correctly.
 * `the number of messages read from SQS with a single request must be configurable` - Yes, environment variable `QUEUE_MAX_NUMBER_OF_MESSAGE_PER_REQUEST`. 
-* `the visibility timeout of read SQS messages must be configurable` - No
+* `the visibility timeout of read SQS messages must be configurable` - Yes, environment variable `QUEUE_VISIBILITY_TIMEOUT_SEC`. Inside code `QueueService.php` `QueueService::changeMessagesVisibility()`, but I did not test that visibility timeout parameter of messages is change in fact. And I haven't worked out this method well enough. What should I do if I can't change it? Can we find out the current value of this parameter, so as not to make unnecessary calls, if it is the same value already.
 
 ## Known issues and todo
