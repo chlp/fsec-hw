@@ -43,7 +43,7 @@ class DataStreamService
     /**
      * @var callable[]
      */
-    private $onDeleteCallbacksBuffer;
+    private $afterSendingCallbacksBuffer;
 
     /**
      * DataStreamService constructor.
@@ -80,17 +80,17 @@ class DataStreamService
         $this->maxBufferSize = $maxBufferSize;
         $this->flushIntervalSec = $flushIntervalSec;
         $this->recordsBuffer = [];
-        $this->onDeleteCallbacksBuffer = [];
+        $this->afterSendingCallbacksBuffer = [];
         $this->lastFlushTimestamp = time();
     }
 
     /**
      * Putting record to the buffer before it would be sent to data stream
      * @param array $data
-     * @param callable $onDeleteCallback - will be called after putting record to data stream
+     * @param callable $afterSendingCallback - will be called after putting record to data stream
      * @return bool - true on success; false if we can never deliver this message
      */
-    public function putRecord(array $data, callable $onDeleteCallback): bool
+    public function putRecord(array $data, callable $afterSendingCallback): bool
     {
         $record = json_encode($data, JSON_UNESCAPED_UNICODE);
         if ($this->sizeOfRecord($record) > self::MAX_SIZE_OF_RECORD) {
@@ -99,7 +99,7 @@ class DataStreamService
             return false;
         }
         $this->recordsBuffer[] = json_encode($data, JSON_UNESCAPED_UNICODE);
-        $this->onDeleteCallbacksBuffer[] = $onDeleteCallback;
+        $this->afterSendingCallbacksBuffer[] = $afterSendingCallback;
         $this->flushIfNeed();
         return true;
     }
@@ -130,7 +130,7 @@ class DataStreamService
     private function flush(): void
     {
         if ($this->send()) {
-            foreach ($this->onDeleteCallbacksBuffer as $callback) {
+            foreach ($this->afterSendingCallbacksBuffer as $callback) {
                 try {
                     call_user_func($callback);
                 } catch (Exception $e) {
@@ -141,7 +141,7 @@ class DataStreamService
             // if we want to use a distributed buffer, we need to remember to synchronize this resources
             $this->lastFlushTimestamp = time();
             $this->recordsBuffer = [];
-            $this->onDeleteCallbacksBuffer = [];
+            $this->afterSendingCallbacksBuffer = [];
         }
     }
 
@@ -187,7 +187,7 @@ class DataStreamService
             // todo: need to learn to break the buffer into smaller pieces and try to send them in parts
             // todo: if it is problem with the same data, may be we can log it and drop? so as not to hang in an infinite loop on one record
             // todo: How to identify specific failed record?
-            Logger::warning(
+            Logger::info(
                 'DataStreamService::send() FailedRecordCount: ' . $res->get('FailedRecordCount') . '.' .
                 ' We will try again. Records count: ' . count($this->recordsBuffer)
             );

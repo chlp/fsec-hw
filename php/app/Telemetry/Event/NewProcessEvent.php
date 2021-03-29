@@ -37,7 +37,7 @@ class NewProcessEvent extends TelemetryEvent
     public static function createFromEventData(TelemetryMessage $message, array $eventData): ?self
     {
         if (!isset($eventData['cmdl']) || !is_string($eventData['cmdl'])) {
-            Logger::info(
+            Logger::debug(
                 'event data is invalid (no correct cmdl) ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
@@ -45,21 +45,21 @@ class NewProcessEvent extends TelemetryEvent
         }
         $cmdl = $eventData['cmdl'];
         if (strlen($cmdl) > self::COMMANDLINE_MAX_LENGTH) {
-            Logger::info(
+            Logger::debug(
                 'cmdl suspicious big length  ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
             $cmdl = substr($cmdl, 0, self::COMMANDLINE_MAX_LENGTH);
         }
         if (strlen($cmdl) < self::COMMANDLINE_MIN_LENGTH) {
-            Logger::info(
+            Logger::debug(
                 'cmdl suspicious small length  ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
         }
 
         if (!isset($eventData['user']) || !is_string($eventData['user'])) {
-            Logger::info(
+            Logger::debug(
                 'event data is invalid (no correct user) ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
@@ -67,14 +67,14 @@ class NewProcessEvent extends TelemetryEvent
         }
         $user = $eventData['user'];
         if (strlen($user) > self::USER_MAX_LENGTH) {
-            Logger::info(
+            Logger::debug(
                 'user suspicious big length  ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );
             $user = substr($cmdl, 0, self::USER_MAX_LENGTH);
         }
         if (strlen($user) < self::USER_MIN_LENGTH) {
-            Logger::info(
+            Logger::debug(
                 'user suspicious small length  ' .
                 $message->getMessageIdMark() . ' ' . json_encode($eventData)
             );

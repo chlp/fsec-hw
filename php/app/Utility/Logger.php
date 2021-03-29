@@ -9,6 +9,7 @@ class Logger
     private const ERROR = 'Error';
     private const WARNING = 'Warning';
     private const INFO = 'Info';
+    private const DEBUG = 'Debug';
 
     private const MAX_MESSAGE_SIZE = 512;
 
@@ -52,6 +53,17 @@ class Logger
             'level' => self::INFO,
             'message' => substr($message, 0, self::MAX_MESSAGE_SIZE),
         ]);
+    }
+
+    public static function debug(string $message): void
+    {
+        // todo: turn on from config
+        if (false) {
+            self::writeLog([
+                'level' => self::DEBUG,
+                'message' => substr($message, 0, self::MAX_MESSAGE_SIZE),
+            ]);
+        }
     }
 
     public static function getExceptionMessage(Exception $exception): string

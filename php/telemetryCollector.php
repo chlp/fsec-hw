@@ -39,6 +39,7 @@ $dataStreamService = new DataStreamService(
 Supervisor::createService($dataStreamService);
 
 // todo: need to create other instances of this application, but need to prepare it: Supervisor & calculate the required amount of the app on every tick
+$eventsCountPerMessage = [];
 while (true) {
     $isDataStreamFlushed = $dataStreamService->flushIfNeed();
     $isQueueDeleted = $queueService->deleteAccumulatedMessagesIfNeed();
@@ -50,20 +51,41 @@ while (true) {
     }
 
     if (!$isDataStreamFlushed && !$isQueueDeleted && count($queueMessages) === 0 && !$queueService->isLongPollingWait()) {
-        usleep(1000); // sleep 0.1 sec. save cpu
+        usleep(100000); // sleep 0.1 sec. save cpu
     }
 
+    $eventsCount = 0;
     foreach ($queueMessages as $queueMessage) {
         $telemetryMessage = TelemetryMessage::createFromQueueMessage($queueMessage);
         if ($telemetryMessage !== null) {
-            $telemetryMessageIdMark = $telemetryMessage->getMessageIdMark();
             $receiptHandle = $queueService->getReceiptHandle($queueMessage);
-            $onDeleteCallback = function () use ($receiptHandle, $queueService) {
-                $queueService->deleteMessage($receiptHandle);
+            $telemetryMessageIdMark = $telemetryMessage->getMessageIdMark();
+            $newProcessEvents = $telemetryMessage->getNewProcessEvents();
+            $networkConnectionEvents = $telemetryMessage->getNetworkConnectionEvents();
+            $eventsCount = count($newProcessEvents) + count($networkConnectionEvents);;
+            $eventsCountPerMessage[$receiptHandle] = $eventsCount;
+            $afterSendingCallback = function () use ($receiptHandle, $queueService, &$eventsCountPerMessage) {
+                $eventsCountPerMessage[$receiptHandle] -= 1;
+                if ($eventsCountPerMessage[$receiptHandle] === 0) {
+                    unset($eventsCountPerMessage[$receiptHandle]);
+                    $queueService->deleteMessage($receiptHandle);
+                }
             };
-            if (!$dataStreamService->putRecord(['id' => $telemetryMessageIdMark], $onDeleteCallback)) {
-                Logger::error("Collector error: can not save message, skip it: " . $telemetryMessageIdMark);
+            foreach ($newProcessEvents as $newProcessEvent) {
+                if (!$dataStreamService->putRecord(['id' => $telemetryMessageIdMark], $afterSendingCallback)) {
+                    Logger::error("Collector error: can not save message, skip it: " . $telemetryMessageIdMark);
+                }
             }
+            foreach ($networkConnectionEvents as $networkConnectionEvent) {
+                if (!$dataStreamService->putRecord(['id' => $telemetryMessageIdMark], $afterSendingCallback)) {
+                    Logger::error("Collector error: can not save message, skip it: " . $telemetryMessageIdMark);
+                }
+            }
+        } else {
+            $receiptHandle = $queueService->getReceiptHandle($queueMessage);
+            $queueService->deleteMessage($receiptHandle);
         }
     }
+
+    Logger::info("Collect " . count($queueMessages) . " more messages ({$eventsCount} events)");
 }

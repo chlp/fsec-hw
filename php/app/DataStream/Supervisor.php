@@ -109,9 +109,11 @@ class Supervisor
             Logger::error("Need to create Supervisor first before usage");
             return;
         }
+
         $instance->size += $size;
         $instance->count += $count;
         $instance->calcAverage();
-        Logger::info("More records were put into the data stream. Total count is {$count} with total size {$size} bytes.");
+
+        Logger::debug("More records were put into the data stream. Total count is {$count} with total size {$size} bytes.");
     }
 }
