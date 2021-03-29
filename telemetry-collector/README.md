@@ -41,4 +41,38 @@ telemetry-collector    | {"level":"Info","message":"Collect 0 more messages (0 e
 telemetry-collector    | {"level":"Info","message":"Collect 0 more messages (0 events)"}
 ```
 
+## Assignment details
+
+Events are created from the data from messages and put to Kinesis data stream in the following JSON format:
+
+"time_processed":1617012950,"time_created":1617012949,"cmdl":"calculator.exe","user":"admin"}
+{"type":"network_connection","device_id":"18453134-f872-4336-a895-09451c2d70e7","submission_id":"00e1456e-c080-48af-8a6e-1f7a6f037a59","time_processed":1617012950,"time_created":1617012949,"source_ip":"192.168.0.1","destination_ip":"142.250.74.110","destination_port":8922}
+
+```yaml
+{
+    "type": "<new_process/network_connection>",       # event type name: "new_process" or "network_connection" (string)
+    "device_id": "<uuid>",                            # unique identifier of the device (string)
+    "time_processed": "<ISO 8601>",                   # processed by backend time, UTC (string)
+    "time_created": "<ISO 8601>",                     # creation time of the submission, UTC (string)
+    "events": {
+        "new_process": [                              # list of new_process events
+            {
+                "cmdl": "<commandline>",              # command line of the executed process (string)
+                "user": "<username>"                  # username who started the process (string)
+            },
+            ...
+        ],
+        "network_connection": [                       # list of network_connection events
+            {
+                "source_ip": "<ipv4>",                # source ip of the network connection, e.g. "192.168.0.1" (string)
+                "destination_ip": "<ipv4>",           # destination ip of the network connection, e.g. "142.250.74.110" (string)
+                "destination_port": <0-65535>         # destination port of the network connection, e.g. 443 (integer)
+            },
+            ...
+        ]
+    }
+}
+```
+
+
 ## Known issues and todo

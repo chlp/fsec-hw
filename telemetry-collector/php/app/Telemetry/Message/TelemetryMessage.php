@@ -26,7 +26,7 @@ class TelemetryMessage
      */
     private $deviceId;
     /**
-     * @var int UTC Timestamp
+     * @var string ISO 8601 client localtime
      */
     private $timeCreated;
     /**
@@ -43,12 +43,12 @@ class TelemetryMessage
      * TelemetryMessage constructor.
      * @param string $submissionId
      * @param string $deviceId
-     * @param int $timeCreated
+     * @param string $timeCreated
      */
     private function __construct(
         string $submissionId,
         string $deviceId,
-        int $timeCreated
+        string $timeCreated
     )
     {
         $this->timeProcessed = time();
@@ -108,15 +108,15 @@ class TelemetryMessage
             Logger::debug('message is invalid (no string time_created) ' . json_encode($message));
             return null;
         }
-        $timeCreated = strtotime($body['time_created']);
+        $timeCreatedTs = strtotime($body['time_created']);
         if (
-            $timeCreated < strtotime(self::TIMECREATED_VALID_OLDEST_DIFF) ||
-            $timeCreated > strtotime(self::TIMECREATED_VALID_NEWEST_DIFF)) {
+            $timeCreatedTs < strtotime(self::TIMECREATED_VALID_OLDEST_DIFF) ||
+            $timeCreatedTs > strtotime(self::TIMECREATED_VALID_NEWEST_DIFF)) {
             Logger::debug('message is invalid (time_created is out of valid scope) ' . json_encode($message));
             return null;
         }
 
-        $telemetryMessage = new self($body['submission_id'], $body['device_id'], $timeCreated);
+        $telemetryMessage = new self($body['submission_id'], $body['device_id'], $body['time_created']);
 
         $events = $body['events'];
         if (!is_array($events)) {
@@ -167,7 +167,7 @@ class TelemetryMessage
         return $this->deviceId;
     }
 
-    public function getTimeCreated(): int
+    public function getTimeCreated(): string
     {
         return $this->timeCreated;
     }
