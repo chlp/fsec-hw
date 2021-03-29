@@ -41,3 +41,4 @@ telemetry-collector    | {"level":"Info","message":"Collect 0 more messages (0 e
 telemetry-collector    | {"level":"Info","message":"Collect 0 more messages (0 events)"}
 ```
 
+## Known issues and todo
