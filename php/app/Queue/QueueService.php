@@ -72,6 +72,7 @@ class QueueService
      * @param int $visibilityTimeoutSec
      * @param int $maxReceiptsToDeleteAtOnce
      * @param int $receiptsToDeleteIntervalSec
+     * @throws Exception
      */
     public function __construct(
         string $region,
@@ -101,6 +102,9 @@ class QueueService
         $this->waitTimeSec = $waitTimeSec;
         $this->visibilityTimeoutSec = $visibilityTimeoutSec;
         $this->queueUrl = self::getQueueUrl($this->sqsClient, $this->queueName);
+        if ($this->queueUrl === null) {
+            throw new Exception('Can not get queue url.');
+        }
         $this->maxReceiptsToDeleteAtOnce = $maxReceiptsToDeleteAtOnce;
         $this->receiptsToDeleteIntervalSec = $receiptsToDeleteIntervalSec;
         $this->receiptHandlesToDelete = [];
